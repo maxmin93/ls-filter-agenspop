@@ -70,7 +70,7 @@ public class JavaFilterExample implements Filter {
                 // skip removeFields
                 if( removeFields.contains(fieldName) ) continue;
                 // add not_nil value to properties
-                if( fieldValue != null || !fieldValue.getClass().getName().equals("org.jruby.RubyNil") )
+                if( fieldValue != null && !fieldValue.getClass().getName().equals("org.jruby.RubyNil") )
                     properties.add( getProperty(fieldName, fieldValue));
             }
 
