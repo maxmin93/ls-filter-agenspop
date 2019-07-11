@@ -8,9 +8,11 @@ import co.elastic.logstash.api.FilterMatchListener;
 import co.elastic.logstash.api.LogstashPlugin;
 import co.elastic.logstash.api.PluginConfigSpec;
 import org.apache.commons.lang3.StringUtils;
+import org.jruby.RubyObject;
 // import org.jruby.RubyNil;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,41 +28,92 @@ public class JavaFilterExample implements Filter {
 
     public static final String ID_DELIMITER = "_";
     public static final PluginConfigSpec<String> DATASOURCE_CONFIG =
-            PluginConfigSpec.stringSetting("datasource", "default");
-    public static final PluginConfigSpec<String> ID_CONFIG =
-            PluginConfigSpec.stringSetting("id", "_id");
+            PluginConfigSpec.stringSetting("datasource", "default", false, true);
     public static final PluginConfigSpec<String> LABEL_CONFIG =
-            PluginConfigSpec.stringSetting("label", "vertex");
+            PluginConfigSpec.stringSetting("label", "vertex", false, true);
+    public static final PluginConfigSpec<List<Object>> IDS_CONFIG =
+            PluginConfigSpec.arraySetting("ids", Arrays.asList("_id"), false, true);
+    public static final PluginConfigSpec<List<Object>> SID_CONFIG =
+            PluginConfigSpec.arraySetting("sid", Collections.EMPTY_LIST, false, false);
+    public static final PluginConfigSpec<List<Object>> TID_CONFIG =
+            PluginConfigSpec.arraySetting("tid", Collections.EMPTY_LIST, false, false);
 
-//    public static final PluginConfigSpec<String> SOURCE_CONFIG =
-//            PluginConfigSpec.stringSetting("source", "message");
-//    private String sourceField;
+    private String id;          // session id (not related with data)
 
-    private String id;
-    private String label;
-    private String datasource;
+    private List<Object> ids;   // field-names for making id value
+    private String label;       // label for agenspop (common)
+    private String datasource;  // datasource for agenspop (common)
+    private List<Object> sid;   // source vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
+    private List<Object> tid;   // target vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
 
     public JavaFilterExample(String id, Configuration config, Context context) {
         // constructors should validate configuration options
-        // this.sourceField = config.get(SOURCE_CONFIG);
         this.id = id;
+        this.ids = config.get(IDS_CONFIG);
         this.label = config.get(LABEL_CONFIG);
         this.datasource = config.get(DATASOURCE_CONFIG);
+        this.sid = config.get(SID_CONFIG);
+        this.tid = config.get(TID_CONFIG);
+    }
+
+    public static String parseTypeName(Object value){
+        String valueType = value.getClass().getName();
+        if( valueType.startsWith("org.jruby.") ) {
+            // **NOTE
+            // Reason 1st: Because logstash plugins are made by JRuby,
+            // Reason 2nd: Agenspop need Java Compatible Object Type in Elasticsearch Repository
+            try {
+                // **Caution : type casting
+                //   ==> org.logstash.ext.JrubyTimestampExtLibrary$RubyTimestamp
+                valueType = ((RubyObject) value).getJavaClass().getName();
+            }catch( Exception e ){
+                valueType = String.class.getName();
+            }
+        }
+        // convert Primitive type to Object type
+        if( !valueType.startsWith("java.") ){
+            if( valueType.equals("long") ) valueType = Long.class.getName();
+            else if( valueType.equals("double") ) valueType = Double.class.getName();
+            else if( valueType.equals("boolean") ) valueType = Boolean.class.getName();
+            else if( valueType.equals("char") ) valueType = Character.class.getName();
+            else if( valueType.equals("byte") ) valueType = Byte.class.getName();
+            else if( valueType.equals("short") ) valueType = Short.class.getName();
+            else if( valueType.equals("int") ) valueType = Integer.class.getName();
+            else if( valueType.equals("float") ) valueType = Float.class.getName();
+            else valueType = String.class.getName();
+        }
+        return valueType;
     }
 
     public static Map<String,String> getProperty(String key, Object value){
         Map<String,String> property = new HashMap<>();
         property.put("key", key);
-        property.put("type", value.getClass().getName());
+        property.put("type", parseTypeName(value));
         property.put("value", value.toString());
         return property;
+    }
+
+    public static String getIdValue(String datasource, String label, List<Object> ids, Event e){
+        StringBuilder sb = new StringBuilder().append(datasource).append(ID_DELIMITER).append(label);
+        for( Object id : ids ){
+            Object value = e.getField(id.toString());
+            if( value != null && !value.getClass().getName().equals("org.jruby.RubyNil") )
+                sb.append(ID_DELIMITER).append(value.toString());
+        }
+        return sb.toString();
     }
 
     @Override
     public Collection<Event> filter(Collection<Event> events, FilterMatchListener matchListener) {
         for (Event e : events) {
-            Object idValue = e.getField(id);
-            if( idValue == null ) continue;
+            // make new ID using field values of ids
+            String idValue = getIdValue(datasource, label, ids, e);
+            String sidValue = (sid.size() < 3) ? null
+                    : getIdValue(sid.get(0).toString(), sid.get(1).toString()
+                        , Collections.singletonList(sid.get(2).toString()), e);
+            String tidValue = (tid.size() < 3) ? null
+                    : getIdValue(tid.get(0).toString(), tid.get(1).toString()
+                    , Collections.singletonList(tid.get(2).toString()), e);
 
             // remove old fields and create properties
             List<Map<String,String>> properties = new ArrayList<>();
@@ -69,18 +122,22 @@ public class JavaFilterExample implements Filter {
                 Object fieldValue = e.remove(fieldName);
                 // skip removeFields
                 if( removeFields.contains(fieldName) ) continue;
-                // add not_nil value to properties
-                if( fieldValue != null && !fieldValue.getClass().getName().equals("org.jruby.RubyNil") )
-                    properties.add( getProperty(fieldName, fieldValue));
+                // skip nullValue
+                if( fieldValue == null || fieldValue.getClass().getName().equals("org.jruby.RubyNil") ) continue;
+                // add field to properties
+                properties.add( getProperty(fieldName, fieldValue) );
             }
 
-            // write new fields
-            e.setField("id", datasource+ID_DELIMITER+idValue.toString());
+            // write new fields (common)
+            e.setField("id", idValue);
             e.setField("deleted", false);
             e.setField("version", System.currentTimeMillis());
             e.setField("label", label);
             e.setField("datasource", datasource);
             e.setField("properties", properties);
+            // write some fields for edge
+            if( sidValue != null ) e.setField("sid", sidValue);
+            if( tidValue != null ) e.setField("tid", tidValue);
 
             // apply changes
             matchListener.filterMatched(e);
@@ -91,7 +148,7 @@ public class JavaFilterExample implements Filter {
     @Override
     public Collection<PluginConfigSpec<?>> configSchema() {
         // should return a list of all configuration options for this plugin
-        return Collections.unmodifiableList(Arrays.asList(ID_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG));
+        return Collections.unmodifiableList(Arrays.asList(IDS_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG, SID_CONFIG, TID_CONFIG));
     }
 
     @Override
