@@ -11,14 +11,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.jruby.RubyObject;
 // import org.jruby.RubyNil;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 // class name must match plugin name
-@LogstashPlugin(name = "java_filter_example")
-public class JavaFilterExample implements Filter {
+@LogstashPlugin(name = "agenspop_filter")
+public class AgenspopFilter implements Filter {
 
 //    public static final List<String> metaFields = Collections.unmodifiableList(
 //            Arrays.asList("@version", "@timestamp", "sequence", "host"));
@@ -46,7 +43,7 @@ public class JavaFilterExample implements Filter {
     private List<Object> sid;   // source vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
     private List<Object> tid;   // target vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
 
-    public JavaFilterExample(String id, Configuration config, Context context) {
+    public AgenspopFilter(String id, Configuration config, Context context) {
         // constructors should validate configuration options
         this.id = id;
         this.ids = config.get(IDS_CONFIG);
