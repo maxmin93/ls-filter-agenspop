@@ -17,11 +17,8 @@ import java.util.*;
 @LogstashPlugin(name = "agenspop_filter")
 public class AgenspopFilter implements Filter {
 
-//    public static final List<String> metaFields = Collections.unmodifiableList(
-//            Arrays.asList("@version", "@timestamp", "sequence", "host"));
-
     public static final List<String> removeFields = Collections.unmodifiableList(
-            Arrays.asList("@version", "@timestamp"));
+            Arrays.asList("@version", "@timestamp"));       //, "sequence", "host"
 
     public static final String ID_DELIMITER = "_";
     public static final PluginConfigSpec<String> DATASOURCE_CONFIG =
@@ -34,6 +31,8 @@ public class AgenspopFilter implements Filter {
             PluginConfigSpec.arraySetting("sid", Collections.EMPTY_LIST, false, false);
     public static final PluginConfigSpec<List<Object>> TID_CONFIG =
             PluginConfigSpec.arraySetting("tid", Collections.EMPTY_LIST, false, false);
+    public static final PluginConfigSpec<String> NIL_CONFIG =
+            PluginConfigSpec.stringSetting("nil_value", null, false, false);
 
     private String id;          // session id (not related with data)
 
@@ -43,6 +42,8 @@ public class AgenspopFilter implements Filter {
     private List<Object> sid;   // source vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
     private List<Object> tid;   // target vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
 
+    private String nil_value;   // nil value ==> skip property
+
     public AgenspopFilter(String id, Configuration config, Context context) {
         // constructors should validate configuration options
         this.id = id;
@@ -51,6 +52,7 @@ public class AgenspopFilter implements Filter {
         this.datasource = config.get(DATASOURCE_CONFIG);
         this.sid = config.get(SID_CONFIG);
         this.tid = config.get(TID_CONFIG);
+        this.nil_value = config.get(NIL_CONFIG);
     }
 
     public static String parseTypeName(Object value){
@@ -120,7 +122,11 @@ public class AgenspopFilter implements Filter {
                 // skip removeFields
                 if( removeFields.contains(fieldName) ) continue;
                 // skip nullValue
-                if( fieldValue == null || fieldValue.getClass().getName().equals("org.jruby.RubyNil") ) continue;
+                if( fieldValue == null
+                        || fieldValue.getClass().getName().equals("org.jruby.RubyNil")
+                        || fieldValue.toString().isEmpty()
+                        || (nil_value != null && fieldValue.toString().equals(nil_value) )
+                ) continue;
                 // add field to properties
                 properties.add( getProperty(fieldName, fieldValue) );
             }
@@ -145,7 +151,7 @@ public class AgenspopFilter implements Filter {
     @Override
     public Collection<PluginConfigSpec<?>> configSchema() {
         // should return a list of all configuration options for this plugin
-        return Collections.unmodifiableList(Arrays.asList(IDS_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG, SID_CONFIG, TID_CONFIG));
+        return Collections.unmodifiableList(Arrays.asList(IDS_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG, SID_CONFIG, TID_CONFIG, NIL_CONFIG));
     }
 
     @Override
@@ -155,7 +161,6 @@ public class AgenspopFilter implements Filter {
 }
 
 /*
-
 "region=, @version=1, fax=(5) 555-3745, @timestamp=2019-07-10T11:39:41.688Z, country=Mexico, address=Avda. de la Constitución 2222, postalcode=05021, city=México D.F., customerid=ANATR, contactname=Ana Trujillo, companyname=Ana Trujillo Emparedados y helados, phone=(5) 555-4729, contacttitle=Owner"
 
 {
@@ -179,19 +184,5 @@ public class AgenspopFilter implements Filter {
             "id" => "6e73391a73cd79ff04270843886d5d000d88b439808d85fe6db6438235edaeae",
     "datasource" => "northwind",
     "@timestamp" => 2019-07-10T09:41:29.490Z
-}
-
-////////////////////////////////////
-
-{
-            "id" => "6e73391a73cd79ff04270843886d5d000d88b439808d85fe6db6438235edaeae",
-          "meta" => "",                         ## <== e.getMetadata();
-       "message" => "!dlrow olleH",
-      "@version" => "1",
-          "host" => "bgmin-pc",
-      "sequence" => 0,
-    "@timestamp" => 2019-07-10T09:27:51.070Z,
-    "datasource" => "northwind",
-         "label" => "customers"
 }
  */
