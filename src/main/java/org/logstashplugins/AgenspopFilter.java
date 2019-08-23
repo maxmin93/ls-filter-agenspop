@@ -124,6 +124,7 @@ public class AgenspopFilter implements Filter {
                 // skip nullValue
                 if( fieldValue == null
                         || fieldValue.getClass().getName().equals("org.jruby.RubyNil")
+                        || fieldValue.toString().length() == 0
                         || fieldValue.toString().isEmpty()
                         || (nil_value != null && fieldValue.toString().equals(nil_value) )
                 ) continue;
