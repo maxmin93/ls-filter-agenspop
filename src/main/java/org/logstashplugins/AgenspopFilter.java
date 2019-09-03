@@ -134,8 +134,6 @@ public class AgenspopFilter implements Filter {
 
             // write new fields (common)
             e.setField("id", idValue);
-            e.setField("deleted", false);
-            e.setField("version", System.currentTimeMillis());
             e.setField("label", label);
             e.setField("datasource", datasource);
             e.setField("properties", properties);
