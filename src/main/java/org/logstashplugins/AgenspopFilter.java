@@ -18,7 +18,7 @@ import java.util.*;
 public class AgenspopFilter implements Filter {
 
     public static final List<String> removeFields = Collections.unmodifiableList(
-            Arrays.asList("@version", "@timestamp"));       //, "sequence", "host"
+            Arrays.asList("@version", "@timestamp", "message", "sequence"));
 
     public static final String ID_DELIMITER = "_";
     public static final PluginConfigSpec<String> DATASOURCE_CONFIG =
