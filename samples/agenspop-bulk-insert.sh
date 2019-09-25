@@ -5,7 +5,7 @@
 #curl -X DELETE "localhost:9200/agensedge?pretty"
 #sleep 0.5
 
-curl -X GET "localhost:9200/_cat/indices?v"
+curl -X GET "27.117.163.21:15619/_cat/indices?v"
 
 echo "\n================================================="
 echo "** Start bulk-insert to agensvertex, agensedge ! \n"

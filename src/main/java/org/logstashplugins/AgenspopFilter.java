@@ -27,10 +27,10 @@ public class AgenspopFilter implements Filter {
             PluginConfigSpec.stringSetting("label", "vertex", false, true);
     public static final PluginConfigSpec<List<Object>> IDS_CONFIG =
             PluginConfigSpec.arraySetting("ids", Arrays.asList("_id"), false, true);
-    public static final PluginConfigSpec<List<Object>> SID_CONFIG =
-            PluginConfigSpec.arraySetting("sid", Collections.EMPTY_LIST, false, false);
-    public static final PluginConfigSpec<List<Object>> TID_CONFIG =
-            PluginConfigSpec.arraySetting("tid", Collections.EMPTY_LIST, false, false);
+    public static final PluginConfigSpec<List<Object>> SRC_CONFIG =
+            PluginConfigSpec.arraySetting("src", Collections.EMPTY_LIST, false, false);
+    public static final PluginConfigSpec<List<Object>> DST_CONFIG =
+            PluginConfigSpec.arraySetting("dst", Collections.EMPTY_LIST, false, false);
     public static final PluginConfigSpec<String> NIL_CONFIG =
             PluginConfigSpec.stringSetting("nil_value", null, false, false);
 
@@ -39,8 +39,8 @@ public class AgenspopFilter implements Filter {
     private List<Object> ids;   // field-names for making id value
     private String label;       // label for agenspop (common)
     private String datasource;  // datasource for agenspop (common)
-    private List<Object> sid;   // source vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
-    private List<Object> tid;   // target vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
+    private List<Object> src;   // source vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
+    private List<Object> dst;   // target vertex-id of edge for agenspop = { <datasource>, <label>, <fieldName> }
 
     private String nil_value;   // nil value ==> skip property
 
@@ -50,8 +50,8 @@ public class AgenspopFilter implements Filter {
         this.ids = config.get(IDS_CONFIG);
         this.label = config.get(LABEL_CONFIG);
         this.datasource = config.get(DATASOURCE_CONFIG);
-        this.sid = config.get(SID_CONFIG);
-        this.tid = config.get(TID_CONFIG);
+        this.src = config.get(SRC_CONFIG);
+        this.dst = config.get(DST_CONFIG);
         this.nil_value = config.get(NIL_CONFIG);
     }
 
@@ -107,12 +107,12 @@ public class AgenspopFilter implements Filter {
         for (Event e : events) {
             // make new ID using field values of ids
             String idValue = getIdValue(datasource, label, ids, e);
-            String sidValue = (sid.size() < 3) ? null
-                    : getIdValue(sid.get(0).toString(), sid.get(1).toString()
-                        , Collections.singletonList(sid.get(2).toString()), e);
-            String tidValue = (tid.size() < 3) ? null
-                    : getIdValue(tid.get(0).toString(), tid.get(1).toString()
-                    , Collections.singletonList(tid.get(2).toString()), e);
+            String sidValue = (src.size() < 3) ? null
+                    : getIdValue(src.get(0).toString(), src.get(1).toString()
+                        , Collections.singletonList(src.get(2).toString()), e);
+            String tidValue = (dst.size() < 3) ? null
+                    : getIdValue(dst.get(0).toString(), dst.get(1).toString()
+                    , Collections.singletonList(dst.get(2).toString()), e);
 
             // remove old fields and create properties
             List<Map<String,String>> properties = new ArrayList<>();
@@ -138,8 +138,8 @@ public class AgenspopFilter implements Filter {
             e.setField("datasource", datasource);
             e.setField("properties", properties);
             // write some fields for edge
-            if( sidValue != null ) e.setField("sid", sidValue);
-            if( tidValue != null ) e.setField("tid", tidValue);
+            if( sidValue != null ) e.setField("src", sidValue);
+            if( tidValue != null ) e.setField("dst", tidValue);
 
             // apply changes
             matchListener.filterMatched(e);
@@ -150,7 +150,7 @@ public class AgenspopFilter implements Filter {
     @Override
     public Collection<PluginConfigSpec<?>> configSchema() {
         // should return a list of all configuration options for this plugin
-        return Collections.unmodifiableList(Arrays.asList(IDS_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG, SID_CONFIG, TID_CONFIG, NIL_CONFIG));
+        return Collections.unmodifiableList(Arrays.asList(IDS_CONFIG, LABEL_CONFIG, DATASOURCE_CONFIG, SRC_CONFIG, DST_CONFIG, NIL_CONFIG));
     }
 
     @Override
