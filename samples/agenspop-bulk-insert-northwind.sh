@@ -1,11 +1,29 @@
 #!/bin/bash
 
-#curl -X DELETE "localhost:9200/agensvertex?pretty"
-#sleep 0.5
-#curl -X DELETE "localhost:9200/agensedge?pretty"
-#sleep 0.5
+ES_URI="27.117.163.21:15619"
+IDX_VERTEX="elasticvertex"
+IDX_EDGE="elasticedge"
 
-curl -X GET "27.117.163.21:15619/_cat/indices?v"
+curl -X POST "$ES_URI/$IDX_VERTEX/_delete_by_query?pretty" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match": {
+      "datasource": "northwind"
+    }
+  }
+}
+'
+sleep 0.5
+curl -X POST "$ES_URI/$IDX_EDGE/_delete_by_query?pretty" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match": {
+      "datasource": "northwind"
+    }
+  }
+}
+'
+sleep 0.5
 
 echo "\n================================================="
 echo "** Start bulk-insert to agensvertex, agensedge ! \n"
@@ -56,6 +74,8 @@ sleep 0.5
 
 echo "E7) logstash ==> agenspop-edge-supplies.conf"
 logstash -f agenspop-edge-supplies.conf     > /dev/null
+
+curl -X GET "$ES_URI/_cat/indices?v"
 
 echo "\n ..done, Good-bye"
 exit 0

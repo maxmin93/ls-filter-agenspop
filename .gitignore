@@ -3,6 +3,7 @@ bin
 *.idea
 *.iml
 lib/
+samples/*.csv
 vendor/
 .bundle/
 build/
