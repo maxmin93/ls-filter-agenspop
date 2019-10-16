@@ -23,7 +23,7 @@ curl -X POST "$ES_URI/$IDX_EDGE/_delete_by_query?pretty" -H 'Content-Type: appli
   }
 }
 '
-sleep 0.5
+sleep 1.5
 
 echo "\n================================================="
 echo "** Start bulk-insert to agensvertex, agensedge ! \n"
