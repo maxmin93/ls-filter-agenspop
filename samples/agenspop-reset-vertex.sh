@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ES_URL="27.117.163.21:15619"
+ES_URL="localhost:9200"
 ES_IDX="elasticvertex"
 
 echo -e "\n** 0) delete index : ${ES_URL}/${ES_IDX}"

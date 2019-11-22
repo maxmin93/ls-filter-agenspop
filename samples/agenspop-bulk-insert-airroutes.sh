@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ES_URI="27.117.163.21:15619"
+ES_URI="localhost:9200"
 IDX_VERTEX="elasticvertex"
 IDX_EDGE="elasticedge"
 
@@ -24,6 +24,8 @@ curl -X POST "$ES_URI/$IDX_EDGE/_delete_by_query?pretty" -H 'Content-Type: appli
 }
 '
 sleep 1.5
+
+curl -X GET "$ES_URI/_cat/indices?v"
 
 echo "\n================================================="
 echo "** Start bulk-insert to vertex, edge repositories\n"
